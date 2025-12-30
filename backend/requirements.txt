@@ -1,0 +1,24 @@
+# FastAPI Backend Dependencies
+# Python 3.11+
+
+# FastAPI and web server
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.18
+
+# Pydantic for validation
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# MongoDB async driver
+motor==3.6.0
+pymongo==4.10.1
+
+# OpenAI for embeddings
+openai==1.58.1
+
+# CORS and middleware
+python-dotenv==1.0.1
+
+# Logging and monitoring
+python-json-logger==3.2.1
