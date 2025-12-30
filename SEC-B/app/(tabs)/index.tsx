@@ -74,6 +74,30 @@ export default function HomeScreen() {
           <ThemedText type="defaultSemiBold">app-example</ThemedText>.
         </ThemedText>
       </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/todo">
+          <Link.Trigger>
+            <ThemedText type="subtitle">Try the Todo app</ThemedText>
+          </Link.Trigger>
+          <Link.Preview />
+        </Link>
+
+        <ThemedText>
+          {`Open a simple Todo screen to add, toggle, and delete items.`}
+        </ThemedText>
+      </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/notes">
+          <Link.Trigger>
+            <ThemedText type="subtitle">AI-Powered Notes</ThemedText>
+          </Link.Trigger>
+          <Link.Preview />
+        </Link>
+
+        <ThemedText>
+          {`Experience rich text editing with AI tag suggestions and semantic search using Firebase Vertex AI Gemini 2.0.`}
+        </ThemedText>
+      </ThemedView>
     </ParallaxScrollView>
   );
 }
