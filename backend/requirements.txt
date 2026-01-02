@@ -12,10 +12,10 @@ pydantic-settings==2.6.1
 
 # MongoDB async driver
 motor==3.6.0
-pymongo==4.10.1
+pymongo>=4.9,<4.10
 
-# OpenAI for embeddings
-openai==1.58.1
+# Google Gemini for embeddings
+google-generativeai==0.8.3
 
 # CORS and middleware
 python-dotenv==1.0.1

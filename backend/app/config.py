@@ -15,10 +15,10 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
     debug: bool = False
     
-    # OpenAI Configuration
-    openai_api_key: str
-    openai_embedding_model: str = "text-embedding-3-small"
-    openai_embedding_dimensions: int = 1536
+    # Google Gemini Configuration
+    gemini_api_key: str
+    gemini_embedding_model: str = "models/text-embedding-004"
+    gemini_embedding_dimensions: int = 768
     
     # MongoDB Configuration
     mongodb_uri: str

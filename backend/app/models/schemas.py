@@ -79,6 +79,7 @@ class SearchResponse(BaseModel):
     results: list[SearchResult]
     query: str
     count: int
+    search_time_ms: float = 0.0
 
 
 class HealthResponse(BaseModel):

@@ -1,10 +1,10 @@
 # Notes RAG Backend API
 
-FastAPI backend for MongoDB Atlas Vector Search RAG application with OpenAI embeddings.
+FastAPI backend for MongoDB Atlas Vector Search RAG application with Google Gemini embeddings.
 
 ## Features
 
-- ✅ **POST /api/notes** - Create notes with automatic OpenAI `text-embedding-3-small` embedding generation
+- ✅ **POST /api/notes** - Create notes with automatic Google Gemini `text-embedding-004` embedding generation
 - ✅ **POST /api/search** - Vector search with `$vectorSearch`, userId filter, cosine similarity
 - ✅ **GET /api/notes/{user_id}** - List user's notes
 - ✅ **Motor** for async MongoDB operations
@@ -34,9 +34,9 @@ FastAPI backend for MongoDB Atlas Vector Search RAG application with OpenAI embe
      │      │
      ↓      ↓
 ┌─────────┐ ┌──────────────┐
-│ OpenAI  │ │  MongoDB     │
-│ API     │ │  Atlas       │
-│         │ │              │
+│ Google  │ │  MongoDB     │
+│ Gemini  │ │  Atlas       │
+│ API     │ │              │
 │ text-   │ │ Vector       │
 │ embedding│ │ Search       │
 └─────────┘ └──────────────┘
@@ -46,7 +46,7 @@ FastAPI backend for MongoDB Atlas Vector Search RAG application with OpenAI embe
 
 - Python 3.11+
 - MongoDB Atlas account with Vector Search enabled
-- OpenAI API key
+- Google Gemini API key
 - Docker (optional, for containerized deployment)
 
 ## Quick Start
@@ -69,7 +69,7 @@ cp .env.example .env
 Edit `.env` with your credentials:
 
 ```env
-OPENAI_API_KEY=sk-your-openai-api-key-here
+GEMINI_API_KEY=your-gemini-api-key-here
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/
 ```
 
@@ -88,7 +88,7 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/
     {
       "type": "vector",
       "path": "embedding",
-      "numDimensions": 1536,
+      "numDimensions": 768,
       "similarity": "cosine"
     },
     {
@@ -174,8 +174,8 @@ Create a new note with automatic embedding generation.
   "content": "Discussed project timeline and deliverables",
   "user_id": "user123",
   "tags": ["work", "meeting"],
-  "created_at": "2025-12-30T10:30:00Z",
-  "updated_at": "2025-12-30T10:30:00Z"
+  "created_at": "2026-01-02T10:30:00Z",
+  "updated_at": "2026-01-02T10:30:00Z"
 }
 ```
 
@@ -254,7 +254,7 @@ Health check endpoint.
   "status": "healthy",
   "version": "1.0.0",
   "mongodb_connected": true,
-  "openai_configured": true
+  "gemini_configured": true
 }
 ```
 
@@ -264,9 +264,9 @@ All settings in `app/config.py` can be overridden with environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OPENAI_API_KEY` | *required* | OpenAI API key |
-| `OPENAI_EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model |
-| `OPENAI_EMBEDDING_DIMENSIONS` | `1536` | Embedding dimensions |
+| `GEMINI_API_KEY` | *required* | Google Gemini API key |
+| `GEMINI_EMBEDDING_MODEL` | `models/text-embedding-004` | Embedding model |
+| `GEMINI_EMBEDDING_DIMENSIONS` | `768` | Embedding dimensions |
 | `MONGODB_URI` | *required* | MongoDB connection string |
 | `MONGODB_DATABASE` | `notes_rag` | Database name |
 | `MONGODB_COLLECTION` | `notes` | Collection name |
@@ -294,7 +294,7 @@ backend/
 │   └── services/
 │       ├── __init__.py
 │       ├── mongodb_service.py   # Motor async MongoDB
-│       └── openai_service.py    # OpenAI embeddings
+│       └── gemini_service.py    # Google Gemini embeddings
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
@@ -336,7 +336,7 @@ The vector search requires a specific index configuration:
 
 - **Type**: `vector`
 - **Path**: `embedding`
-- **Dimensions**: `1536` (for text-embedding-3-small)
+- **Dimensions**: `768` (for text-embedding-004)
 - **Similarity**: `cosine`
 - **Filter**: `user_id` (for user-specific searches)
 
@@ -350,7 +350,7 @@ The search uses MongoDB's aggregation pipeline:
     $vectorSearch: {
       index: "vector_index",
       path: "embedding",
-      queryVector: [...], // 1536-dimensional vector
+      queryVector: [...], // 768-dimensional vector
       numCandidates: 100,
       limit: 10,
       filter: {
@@ -381,14 +381,15 @@ The search uses MongoDB's aggregation pipeline:
 4. **Limit**: Keep at 10-20 for best UX
 5. **Filter Performance**: User filter is efficient with proper indexing
 
-## OpenAI Embeddings
+## Google Gemini Embeddings
 
-### Model: text-embedding-3-small
+### Model: text-embedding-004
 
-- **Dimensions**: 1536
-- **Cost**: $0.02 per 1M tokens (~4,000 pages)
-- **Performance**: ~50-100ms per embedding
-- **Max Input**: 8,191 tokens
+- **Dimensions**: 768
+- **Cost**: Free tier available, then usage-based pricing
+- **Performance**: ~50-150ms per embedding
+- **Max Input**: ~20,000 characters
+- **Task Types**: retrieval_document, retrieval_query
 
 ### Embedding Strategy
 
@@ -396,11 +397,14 @@ The API combines title, content, and tags for comprehensive semantic representat
 
 ```python
 combined_text = f"{title}\n\n{content}\n\nTags: {', '.join(tags)}"
-embedding = await openai.embeddings.create(
-    model="text-embedding-3-small",
-    input=combined_text
+embedding = genai.embed_content(
+    model="models/text-embedding-004",
+    content=combined_text,
+    task_type="retrieval_document"
 )
 ```
+
+For search queries, uses `retrieval_query` task type for better matching.
 
 ## CORS Configuration
 
@@ -435,14 +439,14 @@ Returned for server errors:
 
 ```json
 {
-  "detail": "Failed to create note: OpenAI API error"
+  "detail": "Failed to create note: Gemini API error"
 }
 ```
 
 ### Common Issues
 
-1. **Vector index not found**: Create the index in MongoDB Atlas
-2. **OpenAI rate limit**: Implement retry logic or reduce request rate
+1. **Vector index not found**: Create the index in MongoDB Atlas with 768 dimensions
+2. **Gemini API quota exceeded**: Check quotas in Google Cloud Console or upgrade plan
 3. **MongoDB connection timeout**: Check connection string and network
 4. **Empty search results**: Index may still be building (wait 10 min)
 
@@ -497,8 +501,8 @@ MIT
 For issues or questions:
 - Check `/docs` for API documentation
 - Review MongoDB Atlas Vector Search docs
-- Check OpenAI embeddings documentation
+- Check Google Gemini API documentation
 
 ---
 
-Built with FastAPI, MongoDB Atlas, OpenAI, and Motor
+Built with FastAPI, MongoDB Atlas, Google Gemini, and Motor

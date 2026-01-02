@@ -1,6 +1,6 @@
 """
 FastAPI application entry point
-MongoDB Atlas Vector Search RAG backend with OpenAI embeddings
+MongoDB Atlas Vector Search RAG backend with Google Gemini embeddings
 """
 
 from fastapi import FastAPI, status
@@ -35,21 +35,27 @@ async def lifespan(app: FastAPI):
         logger.info("✓ MongoDB connected")
     except Exception as e:
         logger.error(f"✗ Failed to connect to MongoDB: {str(e)}")
-        raise
+        logger.warning("⚠️  Application will start without MongoDB connection")
+        logger.warning("   This is a DNS resolution issue (cannot open /etc/resolv.conf)")
+        logger.warning("   The app will run but database operations will fail")
+        logger.warning("   To fix: Check your system's DNS configuration or use direct MongoDB URI")
     
     yield
     
     # Shutdown
     logger.info("Shutting down application...")
-    await mongodb_service.disconnect()
-    logger.info("✓ MongoDB disconnected")
+    try:
+        await mongodb_service.disconnect()
+        logger.info("✓ MongoDB disconnected")
+    except Exception as e:
+        logger.error(f"Error disconnecting MongoDB: {str(e)}")
 
 
 # Create FastAPI app
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    description="MongoDB Atlas Vector Search RAG API with OpenAI Embeddings",
+    description="MongoDB Atlas Vector Search RAG API with Google Gemini Embeddings",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc"
@@ -100,13 +106,13 @@ async def health_check():
     Returns the status of the API and connected services
     """
     mongodb_connected = await mongodb_service.is_connected()
-    openai_configured = bool(settings.openai_api_key)
+    gemini_configured = bool(settings.gemini_api_key)
     
     return HealthResponse(
-        status="healthy" if mongodb_connected and openai_configured else "degraded",
+        status="healthy" if mongodb_connected and gemini_configured else "degraded",
         version=settings.app_version,
         mongodb_connected=mongodb_connected,
-        openai_configured=openai_configured
+        openai_configured=gemini_configured
     )
 
 

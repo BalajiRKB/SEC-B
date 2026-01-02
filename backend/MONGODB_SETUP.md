@@ -81,7 +81,7 @@ collection.insert_one({
     "content": "Testing",
     "user_id": "test",
     "tags": [],
-    "embedding": [0.1] * 1536
+    "embedding": [0.1] * 768
 })
 
 print("Database and collection created!")
@@ -108,7 +108,7 @@ print("Database and collection created!")
     {
       "type": "vector",
       "path": "embedding",
-      "numDimensions": 1536,
+      "numDimensions": 768,
       "similarity": "cosine"
     },
     {
@@ -130,7 +130,7 @@ print("Database and collection created!")
     {
       "type": "vector",           // Vector search field
       "path": "embedding",        // Field name in documents
-      "numDimensions": 1536,      // OpenAI text-embedding-3-small dimensions
+      "numDimensions": 768,       // Google Gemini text-embedding-004 dimensions
       "similarity": "cosine"      // Cosine similarity (best for embeddings)
     },
     {
@@ -180,7 +180,7 @@ async def test_connection():
         "content": "This is a test",
         "user_id": "test123",
         "tags": ["test"],
-        "embedding": [0.1] * 1536
+        "embedding": [0.1] * 768  # Gemini embedding dimensions
     })
     
     print(f"✓ Inserted document: {result.inserted_id}")
@@ -192,7 +192,7 @@ async def test_connection():
                 "$vectorSearch": {
                     "index": "vector_index",
                     "path": "embedding",
-                    "queryVector": [0.1] * 1536,
+                    "queryVector": [0.1] * 768,  # Gemini embedding dimensions
                     "numCandidates": 100,
                     "limit": 5
                 }
@@ -259,7 +259,7 @@ Expected output:
 - Index may still be building
 - No documents in collection yet
 - Check `user_id` filter matches your test data
-- Verify embedding dimensions (must be 1536)
+- Verify embedding dimensions (must be 768 for Gemini text-embedding-004)
 
 ### Special Characters in Password
 
@@ -288,6 +288,7 @@ Encoded:  Pass%40123%23
 - Single index on `embedding` field
 - Cosine similarity
 - Include `user_id` filter
+- 768 dimensions for Gemini text-embedding-004
 
 ### For Production
 - Upgrade to M10+ for better performance
@@ -303,7 +304,7 @@ Encoded:  Pass%40123%23
     {
       "type": "vector",
       "path": "embedding",
-      "numDimensions": 1536,
+      "numDimensions": 768,
       "similarity": "cosine"
       // Add for better recall:
       // "quantization": {

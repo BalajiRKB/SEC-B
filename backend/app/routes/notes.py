@@ -9,7 +9,7 @@ import logging
 
 from app.models.schemas import NoteCreate, NoteResponse, SearchQuery, SearchResponse, SearchResult
 from app.services.mongodb_service import MongoDBService, get_mongodb
-from app.services.openai_service import generate_note_embedding, generate_embedding
+from app.services.gemini_service import generate_note_embedding, generate_query_embedding
 
 router = APIRouter(prefix="/api", tags=["notes"])
 logger = logging.getLogger(__name__)
@@ -102,10 +102,13 @@ async def search_notes(
     
     Returns semantically similar notes with similarity scores
     """
+    import time
+    start_time = time.time()
+    
     try:
         # Generate embedding for the search query
         logger.info(f"Generating embedding for search query: {query.query[:50]}...")
-        query_embedding = await generate_embedding(query.query)
+        query_embedding = await generate_query_embedding(query.query)
         
         # Perform vector search
         logger.info(f"Searching notes for user: {query.user_id}")
@@ -124,12 +127,14 @@ async def search_notes(
             for result in results
         ]
         
-        logger.info(f"Found {len(search_results)} results")
+        search_time_ms = (time.time() - start_time) * 1000
+        logger.info(f"Found {len(search_results)} results in {search_time_ms:.2f}ms")
         
         return SearchResponse(
             results=search_results,
             query=query.query,
-            count=len(search_results)
+            count=len(search_results),
+            search_time_ms=search_time_ms
         )
         
     except ValueError as e:
@@ -174,3 +179,78 @@ async def list_user_notes(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list notes: {str(e)}"
         )
+
+
+@router.post(
+    "/suggest-tags",
+    summary="Get AI tag suggestions",
+    description="Analyze note content and suggest relevant tags using Gemini"
+)
+async def suggest_tags(
+    request: dict
+) -> dict:
+    """
+    Get AI-powered tag suggestions based on note content
+    
+    - **title**: Note title
+    - **content**: Note content
+    
+    Returns list of suggested tags with confidence scores
+    """
+    try:
+        title = request.get("title", "")
+        content = request.get("content", "")
+        
+        if not title and not content:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Title or content is required"
+            )
+        
+        # Use Gemini to generate tag suggestions
+        import google.generativeai as genai
+        from app.config import get_settings
+        settings = get_settings()
+        
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        
+        prompt = f"""Analyze this note and suggest 3-5 relevant tags. 
+        
+Title: {title}
+Content: {content}
+
+Return ONLY a JSON array with this exact format:
+[{{"tag": "example", "confidence": 0.95}}]
+
+Rules:
+- Tags should be single words or short phrases
+- Confidence should be between 0.0 and 1.0
+- Return 3-5 tags maximum
+- No explanation, just the JSON array"""
+
+        response = model.generate_content(prompt)
+        
+        # Parse the JSON response
+        import json
+        import re
+        
+        text = response.text.strip()
+        # Extract JSON array from markdown code blocks if present
+        json_match = re.search(r'\[.*\]', text, re.DOTALL)
+        if json_match:
+            text = json_match.group(0)
+        
+        suggestions = json.loads(text)
+        
+        return {"suggestions": suggestions}
+        
+    except Exception as e:
+        logger.error(f"Error generating tag suggestions: {str(e)}")
+        # Return fallback suggestions instead of failing
+        return {
+            "suggestions": [
+                {"tag": "notes", "confidence": 0.5},
+                {"tag": "ideas", "confidence": 0.5}
+            ]
+        }
