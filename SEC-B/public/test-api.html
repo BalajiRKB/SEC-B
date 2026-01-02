@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MindVault API Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { color: #1976d2; margin-bottom: 10px; }
+        .subtitle { color: #666; margin-bottom: 30px; }
+        .test { 
+            margin: 20px 0; 
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #1976d2;
+            border-radius: 4px;
+        }
+        .test h3 { margin: 0 0 10px 0; color: #333; }
+        .status { 
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .status.success { background: #4caf50; color: white; }
+        .status.error { background: #f44336; color: white; }
+        .status.loading { background: #ff9800; color: white; }
+        pre {
+            background: #263238;
+            color: #aed581;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 10px 5px 0 0;
+        }
+        button:hover { background: #1565c0; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 MindVault API Test</h1>
+        <p class="subtitle">Testing frontend-backend connectivity</p>
+
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="testHealth()">Test Health</button>
+        <button onclick="testListNotes()">Test List Notes</button>
+        <button onclick="testSearch()">Test Search</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(title, status, data) {
+            const testDiv = document.createElement('div');
+            testDiv.className = 'test';
+            testDiv.innerHTML = `
+                <h3>${title} <span class="status ${status}">${status.toUpperCase()}</span></h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            resultsDiv.appendChild(testDiv);
+        }
+
+        async function testHealth() {
+            resultsDiv.innerHTML = '';
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                const data = await response.json();
+                addResult('Health Check', 'success', data);
+            } catch (error) {
+                addResult('Health Check', 'error', { error: error.message });
+            }
+        }
+
+        async function testListNotes() {
+            resultsDiv.innerHTML = '';
+            try {
+                const response = await fetch(`${API_BASE}/notes/demo-user`);
+                const data = await response.json();
+                addResult(`List Notes (${data.length} found)`, 'success', data.slice(0, 2));
+            } catch (error) {
+                addResult('List Notes', 'error', { error: error.message });
+            }
+        }
+
+        async function testSearch() {
+            resultsDiv.innerHTML = '';
+            try {
+                const response = await fetch(`${API_BASE}/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: 'machine learning',
+                        user_id: 'demo-user',
+                        top_k: 3
+                    })
+                });
+                const data = await response.json();
+                addResult(`Semantic Search (${data.count} results, ${data.search_time_ms.toFixed(0)}ms)`, 'success', {
+                    query: data.query,
+                    count: data.count,
+                    search_time_ms: data.search_time_ms,
+                    top_result: data.results[0] ? {
+                        title: data.results[0].note.title,
+                        score: (data.results[0].score * 100).toFixed(1) + '%'
+                    } : null
+                });
+            } catch (error) {
+                addResult('Semantic Search', 'error', { error: error.message });
+            }
+        }
+
+        async function runAllTests() {
+            resultsDiv.innerHTML = '';
+            addResult('Running Tests...', 'loading', { message: 'Please wait...' });
+            
+            await testHealth();
+            await new Promise(r => setTimeout(r, 500));
+            
+            await testListNotes();
+            await new Promise(r => setTimeout(r, 500));
+            
+            await testSearch();
+        }
+
+        // Run tests on load
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 500);
+        });
+    </script>
+</body>
+</html>
